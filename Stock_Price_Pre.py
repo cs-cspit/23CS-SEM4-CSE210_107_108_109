@@ -99,13 +99,50 @@ y_future = scaler.inverse_transform(future_predictions_array.reshape(-1, 1))
 future_time_indices = pd.date_range(start=df.index[-1], periods=duration, freq="D")
 st.markdown(y_future)
 # Plot predictions
-fig, ax = plt.subplots()
-ax.plot(df.index, df["Close"], label='Historical', color='b')
-ax.plot(future_time_indices, y_future, label='Predicted', color='r')
-ax.set_xlabel('Days')
-ax.set_ylabel('Price')
-ax.legend()
-st.pyplot(fig)
+import plotly.express as px
+import pandas as pd
+
+# Ensure y_future is flat
+if y_future.ndim > 1:
+    y_future = y_future.flatten()
+
+# Regenerate future_time_indices if needed
+if len(future_time_indices) != len(y_future):
+    future_time_indices = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=len(y_future), freq='D')
+
+# Convert historical close to flat array if needed
+historical_prices = df["Close"].values.flatten()
+
+# Prepare historical DataFrame
+df_hist = pd.DataFrame({
+    "Date": df.index,
+    "Price": historical_prices,
+    "Type": "Historical"
+})
+
+# Prepare future prediction DataFrame
+df_future = pd.DataFrame({
+    "Date": future_time_indices,
+    "Price": y_future,
+    "Type": "Predicted"
+})
+
+# Combine both into one plot-friendly DataFrame
+plot_df = pd.concat([df_hist, df_future], ignore_index=True)
+
+# Create line chart
+fig = px.line(
+    plot_df,
+    x="Date",
+    y="Price",
+    color="Type",
+    title="📈 Stock Price: Historical vs Predicted",
+    labels={"Price": "Stock Price", "Date": "Date"},
+    template="plotly_white"
+)
+
+# Show in Streamlit
+st.plotly_chart(fig, use_container_width=True)
 
 # Moving Averages Analysis
 start = '2021-01-01'
